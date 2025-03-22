@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "gpt-implementation"
+version = "0.1.0"
+description = ""
+authors = ["qcloop <umedzokirov@hotmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+torch = "^2.6.0"
+importlib-metadata = "^8.6.1"
+numpy = "^2.2.4"
+tiktoken = "^0.9.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
