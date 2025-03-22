@@ -1,5 +1,8 @@
+from simple_self_attention.non_trainable_weights import compute
+
+
 def main():
-    print("Hello, world!")
+    compute()
 
 if __name__ == "__main__":
     main()

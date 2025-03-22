@@ -7,6 +7,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+torch = "^2.6.0"
+importlib-metadata = "^8.6.1"
+numpy = "^2.2.4"
 
 
 [build-system]
