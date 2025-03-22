@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 
-from gpt_implementation.gpt.transformer import DummyTransformerBlock
-from gpt_implementation.gpt.layer_norm import DummyLayerNorm
+from .layer_norm import DummyLayerNorm
+from .transformer import DummyTransformerBlock
+
+
 
 
 class DummyGPTModel(nn.Module):
