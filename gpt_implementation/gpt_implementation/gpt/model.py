@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
 
-from .layer_norm import DummyLayerNorm
+from .layer_norm import LayerNorm
 from .transformer import DummyTransformerBlock
-
-
 
 
 class DummyGPTModel(nn.Module):
@@ -20,7 +18,7 @@ class DummyGPTModel(nn.Module):
         )
 
         # Use a placeholder for LayerNorm
-        self.final_norm = DummyLayerNorm(cfg["emb_dim"])
+        self.final_norm = LayerNorm(cfg["emb_dim"])
         self.out_head = nn.Linear(cfg["emb_dim"], cfg["vocab_size"], bias=False)
 
     def forward(self, in_idx):
