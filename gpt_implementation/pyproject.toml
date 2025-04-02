@@ -6,12 +6,14 @@ authors = ["qcloop <umedzokirov@hotmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
-torch = "^2.6.0"
+python = "^3.11"
 importlib-metadata = "^8.6.1"
-numpy = "^2.2.4"
+numpy = "1.26.4"
 tiktoken = "^0.9.0"
 black = "^25.1.0"
+torch = "2.1.0"
+matplotlib = "^3.10.1"
+pybind11 = "^2.13.6"
 
 
 [build-system]

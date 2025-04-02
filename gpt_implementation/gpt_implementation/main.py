@@ -1,7 +1,9 @@
 from gpt.model import DummyGPTModel
+from activations.gelu import GELU
 from tokenizer.encoder import Encoder
 import torch
 from torch import nn
+import matplotlib.pyplot as plt
 
 GPT_CONFIG_124M = {
     "vocab_size": 50257,  # Vocabulary size
@@ -60,7 +62,7 @@ def _sample_dim():
     print("#################")
 
 
-def main():
+def __model_sample():
     text = ["Every effort moves you", "Every day holds a"]
     batch = Encoder.convert(text)
     print(batch)
@@ -75,6 +77,29 @@ def main():
     print("#################")
     _sample_dim()
     print("#################")
+
+
+def __gelu_sample():
+    gelu = GELU()
+    relu = nn.ReLU()
+
+    x = torch.linspace(-3, 3, 100)
+    y_gelu, y_relu = gelu(x), relu(x)
+
+    plt.figure(figsize=(8, 3))
+    for i, (y, label) in enumerate(zip([y_gelu, y_relu], ["GELU", "ReLU"]), 1):
+        plt.subplot(1, 2, i)
+        plt.plot(x, y)
+        plt.title(f"{label} activation function")
+        plt.xlabel("x")
+        plt.ylabel(f"{label}(x)")
+        plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+def main():
+    __gelu_sample()
 
 
 if __name__ == "__main__":
