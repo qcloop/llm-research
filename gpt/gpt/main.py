@@ -1,3 +1,4 @@
+from text_generator import TextGenerator
 from models.dummy import DummyGPTModel
 from activations.gelu import GELU
 from tokenizer.encoder import Encoder
@@ -99,8 +100,24 @@ def __gelu_sample():
     plt.show()
 
 
+def __text_generation(input: str, max_new_tokens: int):
+    GPT_CONFIG_124M = {
+        "vocab_size": 50257,  # Vocabulary size
+        "context_length": 1024,  # Context length
+        "emb_dim": 768,  # Embedding dimension
+        "n_heads": 12,  # Number of attention heads
+        "n_layers": 12,  # Number of layers
+        "drop_rate": 0.1,  # Dropout rate
+        "qkv_bias": False,  # Query-Key-Value bias
+    }
+    generator = TextGenerator(config=GPT_CONFIG_124M)
+
+    return generator.generate(input=input, max_new_tokens=max_new_tokens)
+
+
 def main():
-    __gelu_sample()
+    result = __text_generation("Here we go Panthers", 10)
+    print(result)
 
 
 if __name__ == "__main__":
