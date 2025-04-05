@@ -1,4 +1,4 @@
-from gpt.model import DummyGPTModel
+from models.dummy import DummyGPTModel
 from activations.gelu import GELU
 from tokenizer.encoder import Encoder
 import torch
@@ -97,6 +97,7 @@ def __gelu_sample():
 
     plt.tight_layout()
     plt.show()
+
 
 def main():
     __gelu_sample()
