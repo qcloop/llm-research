@@ -115,9 +115,30 @@ def __text_generation(input: str, max_new_tokens: int):
     return generator.generate(input=input, max_new_tokens=max_new_tokens)
 
 
+def __tensor_fun():
+    x = torch.zeros(2, 1, 2, 1, 2)
+    print(x)
+    print(x.shape)
+    # Expected output: torch.Size([2, 1, 2, 1, 2])
+    print("^^^^^^^^^^^^^")
+
+    y = torch.squeeze(x)
+    print(y)
+    print(y.shape)
+    # Expected output: torch.Size([2, 2, 2])
+    print("^^^^^^^^^^^^^")
+    z = torch.squeeze(x, 3)
+    print(z)
+    print(z.shape)
+    # Expected output: torch.Size([2, 2, 1, 2]) 
+
 def main():
-    result = __text_generation("Here we go Panthers", 10)
-    print(result)
+  result = __text_generation("Here we go Panthers", 10)
+  print(result)
+  my_array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  print(my_array[-20:])
+  print(my_array[:-20])
+ 
 
 
 if __name__ == "__main__":
