@@ -1,3 +1,4 @@
+from open_ai.download_weights import download_gpt2_files
 from text_generator import TextGenerator
 from models.dummy import DummyGPTModel
 from activations.gelu import GELU
@@ -169,10 +170,31 @@ def ___probas_target():
     print(f"Targets batch 1: {token_ids_to_text(targets[text_idx], tokenizer)}")
     print(f"Outputs batch 1: {token_ids_to_text(token_ids[text_idx].flatten(), tokenizer)}")
     
-    #text_idx = 1
+    text_idx = 0
     print(f"targets[text_idx]: {targets[text_idx]}")
-    target_probas_1 = probas[text_idx, [0,1,2], [ 1107,   588, 11311]]
+    target_probas_1 = probas[text_idx, [0,1,2], targets[text_idx]]
     print("Text 1:", target_probas_1)
+
+    text_idx = 1
+    print(f"targets[text_idx]: {targets[text_idx]}")
+    target_probas_2 = probas[text_idx, [0,1,2], targets[text_idx]]
+    print("Text 2:", target_probas_2)
+
+    log_probas = torch.log(torch.cat((target_probas_1, target_probas_2)))
+    print("Log probas:", log_probas)
+    avg_log_probas = torch.mean(log_probas)
+    print("Log probas:", avg_log_probas * -1)
+
+    #using cross entropy, should produce same result
+    logits_flat = logits.flatten(0,1)
+    targets_flat = targets.flatten(0)
+    print("logits_flats:", logits_flat.shape)
+    print("targets_flat:", targets_flat.shape)
+    loss = torch.nn.functional.cross_entropy(logits_flat, targets_flat)
+    print("loss:", loss)
+    perpelexity = torch.exp(avg_log_probas * -1)
+    print("perpelexity:", perpelexity)
+
     
     
 def text_to_token_ids(text, tokenizer):
@@ -184,6 +206,30 @@ def token_ids_to_text(token_ids, tokenizer):
     flat = token_ids.squeeze(0) # remove batch dimension
     return tokenizer.decode(flat.tolist())
 
+
+pre_trained_model_dir ="/Users/uzokirov/Development/Python/llm-research/pre-trained_weights"
+
+def download_pretrained_weights():
+    CHOOSE_MODEL = "gpt2-small (124M)"
+
+    BASE_CONFIG = {
+        "vocab_size": 50257,     # Vocabulary size
+        "context_length": 1024,  # Context length
+        "drop_rate": 0.0,        # Dropout rate
+        "qkv_bias": True         # Query-key-value bias
+    }
+
+    model_configs = {
+        "gpt2-small (124M)": {"emb_dim": 768, "n_layers": 12, "n_heads": 12},
+        "gpt2-medium (355M)": {"emb_dim": 1024, "n_layers": 24, "n_heads": 16},
+        "gpt2-large (774M)": {"emb_dim": 1280, "n_layers": 36, "n_heads": 20},
+        "gpt2-xl (1558M)": {"emb_dim": 1600, "n_layers": 48, "n_heads": 25},
+    }
+
+    BASE_CONFIG.update(model_configs[CHOOSE_MODEL])
+    model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
+    download_gpt2_files(model_size, pre_trained_model_dir)
+
 def main():
   #result = __text_generation("Here we go Panthers", 10)
   #print(result)
@@ -191,7 +237,8 @@ def main():
   #print(my_array[-20:])
   #print(my_array[:-20])
   
-  ___probas_target()
+  #___probas_target()
+  download_pretrained_weights()
  
 
 

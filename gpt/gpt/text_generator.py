@@ -8,11 +8,11 @@ class TextGenerator:
         torch.manual_seed(123)
         self.config = config
         self.model = GPTV2(config)
+        self.tokenizer = tiktoken.get_encoding("gpt2")
         self.model.eval()  # disable dropout
 
     def generate(self, input: str, max_new_tokens: int):
-        tokenizer = tiktoken.get_encoding("gpt2")
-        encoded = tokenizer.encode(input)
+        encoded = self.tokenizer.encode(input)
         encoded_tensor = torch.tensor(encoded).unsqueeze(0)
         print(f"\n{50*'='}\n{22*' '}IN\n{50*'='}")
         print("\nInput text:", input)
@@ -21,12 +21,12 @@ class TextGenerator:
         result = self.__generate_text_simple(
             model=self.model,
             idx=encoded_tensor,
-            max_new_tokens=10,
+            max_new_tokens=max_new_tokens,
             context_size=self.config["context_length"],
         )
         print(result)
         print(result.squeeze(0).tolist())
-        return tokenizer.decode(result.squeeze(0).tolist())
+        return  self.tokenizer.decode(result.squeeze(0).tolist())
 
     def __generate_text_simple(self, model, idx, max_new_tokens, context_size):
         # idx is (B, T) array of indices in the current context
@@ -37,7 +37,8 @@ class TextGenerator:
             print(f"****context_size {context_size}")
             print(f"****idx {idx}")
             idx_cond = idx[:, -context_size:]
-            print(f"****idx_cond {idx_cond}")
+            print(f"****idx_cond {idx_cond}, {self.tokenizer.decode(idx_cond.squeeze(0).tolist())}")
+
             # Get the predictions
             with torch.no_grad():
                 logits = model(idx_cond)
