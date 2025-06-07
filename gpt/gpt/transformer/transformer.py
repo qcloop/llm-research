@@ -1,8 +1,5 @@
 import torch.nn as nn
-
-from attention.multi_head_attention import (
-    MultiHeadAttentionV2,
-)
+from attention.multi_head_attention import MultiHeadAttentionV2
 from transformer.feed_forward import FeedForward
 from transformer.layer_norm import LayerNorm
 

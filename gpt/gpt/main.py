@@ -1,16 +1,22 @@
+import matplotlib.pyplot as plt
+import tiktoken
+import torch
+from activations.gelu import GELU
 from finetuning.classifier import (
     calc_accuracy_loader,
     calc_loss_loader,
     classifier_model_init,
+    classify_review,
     make_model_trainable,
     train_classifier_model,
 )
 from finetuning.spam_data_set import (
+    create_data_loaders,
     create_test_data_set,
     create_train_data_set,
     create_validation_data_set,
-    create_data_loaders,
 )
+from models.dummy import DummyGPTModel
 from models.gpt_v2 import GPTV2
 from open_ai.pretrained_weights import (
     download_gpt2_files,
@@ -18,13 +24,8 @@ from open_ai.pretrained_weights import (
     load_weights_into_gpt,
 )
 from text_generator import TextGenerator
-from models.dummy import DummyGPTModel
-from activations.gelu import GELU
 from tokenizer.encoder import Encoder
-import torch
 from torch import nn
-import matplotlib.pyplot as plt
-import tiktoken
 
 GPT_CONFIG_124M = {
     "vocab_size": 50257,  # Vocabulary size
@@ -321,12 +322,28 @@ def generate_text_simple(model, idx, max_new_tokens, context_size):
 
 
 def classify_spam_no_spam():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model_state_dict = torch.load(
+        "/Users/uzokirov/Development/Python/llm-research/model_files/review_classifier.pth",
+        map_location=device,
+        weights_only=True,
+    )
+    model = classifier_model_init()
+    model.load_state_dict(model_state_dict)
+
     text = (
-        "Is the following text 'spam'? Answer with 'yes' or 'no':"
         " 'You are a winner you have been specially"
         " selected to receive $1000 cash award or a $2000 award:\n\n\n"
     )
 
+    tokenizer = tiktoken.get_encoding("gpt2")
+    print(classify_review(text, model, tokenizer, device, max_length=120))
+
+    text_2 = "Hey Norm, just wanted to check if we're still on for dinner tonight? Let me know!"
+    print(classify_review(text_2, model, tokenizer, device, max_length=120))
+
+
+def classify_spam_no_spam_trainer():
     # prepare_training_data_set()
     train_data_set = create_train_data_set()
     test_data_set = create_test_data_set()
@@ -352,13 +369,15 @@ def classify_spam_no_spam():
     inputs = train_data_set.tokenizer.encode("Do you have time")
     inputs = torch.tensor(inputs).unsqueeze(0)
     print("Inputs:", inputs)
-    print("Inputs dimensions:", inputs.shape) # shape: (batch_size, num_tokens)
+    print("Inputs dimensions:", inputs.shape)  # shape: (batch_size, num_tokens)
 
     with torch.no_grad():
         outputs = trainable_model(inputs)
 
     print("Outputs:\n", outputs)
-    print("Outputs dimensions:", outputs.shape) # shape: (batch_size, num_tokens, num_class
+    print(
+        "Outputs dimensions:", outputs.shape
+    )  # shape: (batch_size, num_tokens, num_class
     # result = classify_spam(model, text)
     # print(f"{result}")
 
@@ -369,20 +388,36 @@ def classify_spam_no_spam():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainable_model.to(device)
 
-    torch.manual_seed(123) # For reproducibility due to the shuffling in the training data loader
+    torch.manual_seed(
+        123
+    )  # For reproducibility due to the shuffling in the training data loader
 
-    train_accuracy = calc_accuracy_loader(train_loader, trainable_model, device, num_batches=10)
-    val_accuracy = calc_accuracy_loader(validation_loader, trainable_model, device, num_batches=10)
-    test_accuracy = calc_accuracy_loader(test_loader, trainable_model, device, num_batches=10)
+    train_accuracy = calc_accuracy_loader(
+        train_loader, trainable_model, device, num_batches=10
+    )
+    val_accuracy = calc_accuracy_loader(
+        validation_loader, trainable_model, device, num_batches=10
+    )
+    test_accuracy = calc_accuracy_loader(
+        test_loader, trainable_model, device, num_batches=10
+    )
 
-    print(f"Training accuracy: {train_accuracy*100:.2f}%")
-    print(f"Validation accuracy: {val_accuracy*100:.2f}%")
-    print(f"Test accuracy: {test_accuracy*100:.2f}%")
+    print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+    print(f"Validation accuracy: {val_accuracy * 100:.2f}%")
+    print(f"Test accuracy: {test_accuracy * 100:.2f}%")
 
-    with torch.no_grad(): # Disable gradient tracking for efficiency because we are not training, yet
-        train_loss = calc_loss_loader(train_loader, trainable_model, device, num_batches=5)
-        val_loss = calc_loss_loader(validation_loader, trainable_model, device, num_batches=5)
-        test_loss = calc_loss_loader(test_loader, trainable_model, device, num_batches=5)
+    with (
+        torch.no_grad()
+    ):  # Disable gradient tracking for efficiency because we are not training, yet
+        train_loss = calc_loss_loader(
+            train_loader, trainable_model, device, num_batches=5
+        )
+        val_loss = calc_loss_loader(
+            validation_loader, trainable_model, device, num_batches=5
+        )
+        test_loss = calc_loss_loader(
+            test_loader, trainable_model, device, num_batches=5
+        )
 
     print(f"Training loss: {train_loss:.3f}")
     print(f"Validation loss: {val_loss:.3f}")
@@ -390,8 +425,10 @@ def classify_spam_no_spam():
 
     train_classifier_model(trainable_model, train_loader, validation_loader, device)
 
-    torch.save(model.state_dict(), "/Users/uzokirov/Development/Python/llm-research/model_files/review_classifier.pth")
-
+    torch.save(
+        model.state_dict(),
+        "/Users/uzokirov/Development/Python/llm-research/model_files/review_classifier.pth",
+    )
 
 
 def main():

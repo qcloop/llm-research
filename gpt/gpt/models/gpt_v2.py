@@ -1,10 +1,7 @@
 import torch
 import torch.nn as nn
-
 from transformer.layer_norm import LayerNorm
-from transformer.transformer import (
-    TransformerBlock,
-)
+from transformer.transformer import TransformerBlock
 
 
 class GPTV2(nn.Module):

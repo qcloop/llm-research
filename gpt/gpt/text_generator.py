@@ -1,5 +1,5 @@
-import torch
 import tiktoken
+import torch
 from models.gpt_v2 import GPTV2
 
 
@@ -17,7 +17,7 @@ class TextGenerator:
         print(f"\n{50*'='}\n{22*' '}IN\n{50*'='}")
         print("\nInput text:", input)
         print("Encoded input text:", encoded)
-        print("encoded_tensor.shape:", encoded_tensor.shape) 
+        print("encoded_tensor.shape:", encoded_tensor.shape)
         result = self.__generate_text_simple(
             model=self.model,
             idx=encoded_tensor,
@@ -26,7 +26,7 @@ class TextGenerator:
         )
         print(result)
         print(result.squeeze(0).tolist())
-        return  self.tokenizer.decode(result.squeeze(0).tolist())
+        return self.tokenizer.decode(result.squeeze(0).tolist())
 
     def __generate_text_simple(self, model, idx, max_new_tokens, context_size):
         # idx is (B, T) array of indices in the current context
@@ -37,7 +37,9 @@ class TextGenerator:
             print(f"****context_size {context_size}")
             print(f"****idx {idx}")
             idx_cond = idx[:, -context_size:]
-            print(f"****idx_cond {idx_cond}, {self.tokenizer.decode(idx_cond.squeeze(0).tolist())}")
+            print(
+                f"****idx_cond {idx_cond}, {self.tokenizer.decode(idx_cond.squeeze(0).tolist())}"
+            )
 
             # Get the predictions
             with torch.no_grad():

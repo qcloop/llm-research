@@ -1,8 +1,7 @@
 import pandas as pd
-import torch
-from torch.utils.data import Dataset
 import tiktoken
-from torch.utils.data import DataLoader
+import torch
+from torch.utils.data import DataLoader, Dataset
 
 
 class SpamDataset(Dataset):
