@@ -1,3 +1,16 @@
+from finetuning.classifier import (
+    calc_accuracy_loader,
+    calc_loss_loader,
+    classifier_model_init,
+    make_model_trainable,
+    train_classifier_model,
+)
+from finetuning.spam_data_set import (
+    create_test_data_set,
+    create_train_data_set,
+    create_validation_data_set,
+    create_data_loaders,
+)
 from models.gpt_v2 import GPTV2
 from open_ai.pretrained_weights import (
     download_gpt2_files,
@@ -245,6 +258,7 @@ def load_model_params():
     print(params["wte"])
     print("Token embedding weight tensor dimensions: ", params["wte"].shape)
 
+
 def use_pretrained_weights():
     # Define model configurations in a dictionary for compactness
     model_configs = {
@@ -265,7 +279,7 @@ def use_pretrained_weights():
 
     settings, params = load_params_from_file(pre_trained_model_dir, "hparams.json")
     load_weights_into_gpt(gpt, params)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     gpt.to(device)
     torch.manual_seed(123)
     start_context = "Every effort moves you"
@@ -275,17 +289,15 @@ def use_pretrained_weights():
         model=gpt,
         idx=text_to_token_ids(start_context, tokenizer),
         max_new_tokens=35,
-        context_size=GPT_CONFIG_124M["context_length"]
+        context_size=GPT_CONFIG_124M["context_length"],
     )
 
     print("Output text:\n", token_ids_to_text(token_ids, tokenizer))
 
 
-
 def generate_text_simple(model, idx, max_new_tokens, context_size):
     # idx is (B, T) array of indices in the current context
     for _ in range(max_new_tokens):
-
         # Crop current context if it exceeds the supported context size
         # E.g., if LLM supports only 5 tokens, and the context size is 10
         # then only the last 5 tokens are used as context
@@ -307,6 +319,81 @@ def generate_text_simple(model, idx, max_new_tokens, context_size):
 
     return idx
 
+
+def classify_spam_no_spam():
+    text = (
+        "Is the following text 'spam'? Answer with 'yes' or 'no':"
+        " 'You are a winner you have been specially"
+        " selected to receive $1000 cash award or a $2000 award:\n\n\n"
+    )
+
+    # prepare_training_data_set()
+    train_data_set = create_train_data_set()
+    test_data_set = create_test_data_set()
+    validation_data_set = create_validation_data_set()
+    train_loader, validation_loader, test_loader = create_data_loaders(
+        train_data_set, validation_data_set, test_data_set
+    )
+
+    print("Train loader:")
+    for input_batch, target_batch in train_loader:
+        pass
+
+    print("Input batch dimensions:", input_batch.shape)
+    print("Label batch dimensions", target_batch.shape)
+
+    print(f"{len(train_loader)} training batches")
+    print(f"{len(validation_loader)} validation batches")
+    print(f"{len(test_loader)} test batches")
+
+    model = classifier_model_init()
+    trainable_model = make_model_trainable(model)
+
+    inputs = train_data_set.tokenizer.encode("Do you have time")
+    inputs = torch.tensor(inputs).unsqueeze(0)
+    print("Inputs:", inputs)
+    print("Inputs dimensions:", inputs.shape) # shape: (batch_size, num_tokens)
+
+    with torch.no_grad():
+        outputs = trainable_model(inputs)
+
+    print("Outputs:\n", outputs)
+    print("Outputs dimensions:", outputs.shape) # shape: (batch_size, num_tokens, num_class
+    # result = classify_spam(model, text)
+    # print(f"{result}")
+
+    probas = torch.softmax(outputs[:, -1, :], dim=-1)
+    label = torch.argmax(probas)
+    print("Class label:", label.item())
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    trainable_model.to(device)
+
+    torch.manual_seed(123) # For reproducibility due to the shuffling in the training data loader
+
+    train_accuracy = calc_accuracy_loader(train_loader, trainable_model, device, num_batches=10)
+    val_accuracy = calc_accuracy_loader(validation_loader, trainable_model, device, num_batches=10)
+    test_accuracy = calc_accuracy_loader(test_loader, trainable_model, device, num_batches=10)
+
+    print(f"Training accuracy: {train_accuracy*100:.2f}%")
+    print(f"Validation accuracy: {val_accuracy*100:.2f}%")
+    print(f"Test accuracy: {test_accuracy*100:.2f}%")
+
+    with torch.no_grad(): # Disable gradient tracking for efficiency because we are not training, yet
+        train_loss = calc_loss_loader(train_loader, trainable_model, device, num_batches=5)
+        val_loss = calc_loss_loader(validation_loader, trainable_model, device, num_batches=5)
+        test_loss = calc_loss_loader(test_loader, trainable_model, device, num_batches=5)
+
+    print(f"Training loss: {train_loss:.3f}")
+    print(f"Validation loss: {val_loss:.3f}")
+    print(f"Test loss: {test_loss:.3f}")
+
+    train_classifier_model(trainable_model, train_loader, validation_loader, device)
+
+    torch.save(model.state_dict(), "/Users/uzokirov/Development/Python/llm-research/model_files/review_classifier.pth")
+
+
+
 def main():
     # result = __text_generation("Here we go Panthers", 10)
     # print(result)
@@ -317,7 +404,8 @@ def main():
     # ___probas_target()
     # download_pretrained_weights()
     # load_model_params()
-    use_pretrained_weights()
+    # use_pretrained_weights()
+    classify_spam_no_spam()
 
 
 if __name__ == "__main__":
