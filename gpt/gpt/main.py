@@ -2,27 +2,32 @@ import matplotlib.pyplot as plt
 import tiktoken
 import torch
 from activations.gelu import GELU
-from finetuning.classifier import (
-    calc_accuracy_loader,
-    calc_loss_loader,
-    classifier_model_init,
-    classify_review,
-    make_model_trainable,
-    train_classifier_model,
-)
-from finetuning.spam_data_set import (
-    create_data_loaders,
-    create_test_data_set,
-    create_train_data_set,
-    create_validation_data_set,
-)
+from finetuning.classifier import (calc_accuracy_loader, calc_loss_loader,
+                                   classifier_model_init, classify_review,
+                                   make_model_trainable,
+                                   train_classifier_model)
+from finetuning.spam_data_set import (create_data_loaders,
+                                      create_test_data_set,
+                                      create_train_data_set,
+                                      create_validation_data_set)
+from instruction.data_set import (custom_collate_draft_1,
+                                  custom_collate_draft_2, custom_collate_fn,
+                                  format_input, load_raw_data_set)
 from models.dummy import DummyGPTModel
 from models.gpt_v2 import GPTV2
-from open_ai.pretrained_weights import (
-    download_gpt2_files,
-    load_params_from_file,
-    load_weights_into_gpt,
-)
+from multiclassifier.classifier import (mc_calc_accuracy_loader,
+                                        mc_calc_loss_loader,
+                                        mc_classifier_model_init,
+                                        mc_classify_expense,
+                                        mc_make_model_trainable,
+                                        mc_train_classifier_model)
+from multiclassifier.expenses_data_set import (mc_create_data_loaders,
+                                               mc_create_test_data_set,
+                                               mc_create_train_data_set,
+                                               mc_create_validation_data_set)
+from open_ai.pretrained_weights import (download_gpt2_files,
+                                        load_params_from_file,
+                                        load_weights_into_gpt)
 from text_generator import TextGenerator
 from tokenizer.encoder import Encoder
 from torch import nn
@@ -332,7 +337,7 @@ def classify_spam_no_spam():
     model.load_state_dict(model_state_dict)
 
     text = (
-        " 'You are a winner you have been specially"
+        "You are a winner you have been specially"
         " selected to receive $1000 cash award or a $2000 award:\n\n\n"
     )
 
@@ -431,6 +436,70 @@ def classify_spam_no_spam_trainer():
     )
 
 
+def instructions_tuning():
+    data = load_raw_data_set()
+    train_portion = int(len(data) * 0.85)  # 85% for training
+    test_portion = int(len(data) * 0.1)    # 10% for testing
+    val_portion = len(data) - train_portion - test_portion  # Remaining 5% for validation
+
+    train_data = data[:train_portion]
+    test_data = data[train_portion:train_portion + test_portion]
+    val_data = data[train_portion + test_portion:]
+    print("Training set length:", len(train_data))
+    print("Validation set length:", len(val_data))
+    print("Test set length:", len(test_data))  
+
+    inputs_1 = [0, 1, 2, 3, 4]
+    inputs_2 = [5, 6]
+    inputs_3 = [7, 8, 9]
+
+    batch = (
+        inputs_1,
+        inputs_2,
+        inputs_3
+    ) 
+
+    print(custom_collate_draft_1(batch))
+
+    print("/n/n/n Source Target Collated Combo\n\n\n")
+    print(custom_collate_draft_2(batch))
+
+
+    print("/n/n/n Source Target Collated Combo With Sentinel value -100\n\n\n")
+    print(custom_collate_fn(batch))
+
+    logits_1 = torch.tensor(
+    [[-1.0, 1.0, 50256],  # 1st training example
+     [-0.5, 50256, 50256],
+     [-0.5, 50246, 50246]
+     ]  # 2nd training example
+)
+   # targets_1 = torch.tensor([0, 1])
+    targets_2 = torch.tensor([0, 1, -100])
+    tokenizer = tiktoken.get_encoding("gpt2")
+
+    entry = {
+        "instruction": "Edit the following sentence for grammar.",
+        "input": "He go to the park every day.",
+        "output": "He goes to the park every day."
+    }
+    encoded = tokenizer.encode(format_input(entry))
+
+    decoded = tokenizer.decode([50256])
+
+
+    #loss_1 = torch.nn.functional.cross_entropy(logits_1, targets_1)
+    loss_2 = torch.nn.functional.cross_entropy(logits_1, targets_2)
+    #print(loss_1)
+    print("\n\n\n")
+    print(loss_2)
+
+    print("\n\n\n")
+    print(f"decoded {decoded}")
+    print(f"encoded {encoded}")
+    print("\n\n\n")
+    
+
 def main():
     # result = __text_generation("Here we go Panthers", 10)
     # print(result)
@@ -442,7 +511,120 @@ def main():
     # download_pretrained_weights()
     # load_model_params()
     # use_pretrained_weights()
-    classify_spam_no_spam()
+    # classify_spam_no_spam()
+    # instructions_tuning()
+    
+    classify_expenses_trainer()
+    classify_expenses()
+
+
+def classify_expenses_trainer():
+    train_data_set = mc_create_train_data_set()
+    test_data_set = mc_create_test_data_set()
+    validation_data_set = mc_create_validation_data_set()
+    train_loader, validation_loader, test_loader = mc_create_data_loaders(
+        train_data_set, validation_data_set, test_data_set
+    )
+
+    print("Train loader:")
+    for input_batch, target_batch in train_loader:
+        pass
+
+    print("Input batch dimensions:", input_batch.shape)
+    print("Label batch dimensions", target_batch.shape)
+
+    print(f"{len(train_loader)} training batches")
+    print(f"{len(validation_loader)} validation batches")
+    print(f"{len(test_loader)} test batches")
+
+    model = mc_classifier_model_init()
+    trainable_model = mc_make_model_trainable(model)
+
+    inputs = train_data_set.tokenizer.encode("Online subscriptions")
+    inputs = torch.tensor(inputs).unsqueeze(0)
+    print("Inputs:", inputs)
+    print("Inputs dimensions:", inputs.shape)  # shape: (batch_size, num_tokens)
+
+    with torch.no_grad():
+        outputs = trainable_model(inputs)
+
+    print("Outputs:\n", outputs)
+    print(
+        "Outputs dimensions:", outputs.shape
+    )  
+    
+
+    probas = outputs[:, -1, :] #torch.softmax(outputs[:, -1, :], dim=-1)
+    print("Probas: ", probas)
+    label = torch.argmax(probas)
+    print("Expenses Line Number:", label.item())
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    trainable_model.to(device)
+
+    torch.manual_seed(
+        123
+    )  # For reproducibility due to the shuffling in the training data loader
+
+    train_accuracy = mc_calc_accuracy_loader(
+        train_loader, trainable_model, device, num_batches=3
+    )
+    val_accuracy = mc_calc_accuracy_loader(
+        validation_loader, trainable_model, device, num_batches=3
+    )
+    test_accuracy = mc_calc_accuracy_loader(
+        test_loader, trainable_model, device, num_batches=3
+    )
+
+    print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+    print(f"Validation accuracy: {val_accuracy * 100:.2f}%")
+    print(f"Test accuracy: {test_accuracy * 100:.2f}%")
+
+    with (
+        torch.no_grad()
+    ):  # Disable gradient tracking for efficiency because we are not training, yet
+        train_loss = mc_calc_loss_loader(
+            train_loader, trainable_model, device, num_batches=5
+        )
+        val_loss = mc_calc_loss_loader(
+            validation_loader, trainable_model, device, num_batches=5
+        )
+        test_loss = mc_calc_loss_loader(
+            test_loader, trainable_model, device, num_batches=5
+        )
+
+    print(f"Training loss: {train_loss:.3f}")
+    print(f"Validation loss: {val_loss:.3f}")
+    print(f"Test loss: {test_loss:.3f}")
+
+    mc_train_classifier_model(trainable_model, train_loader, validation_loader, device)
+
+    torch.save(
+        model.state_dict(),
+        "/Users/uzokirov/Development/Python/llm-research/model_files/expenses_classifier.pth",
+    )
+
+
+def classify_expenses():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model_state_dict = torch.load(
+        "/Users/uzokirov/Development/Python/llm-research/model_files/expenses_classifier.pth",
+        map_location=device,
+        weights_only=True,
+    )
+    model = mc_classifier_model_init()
+    model.load_state_dict(model_state_dict)
+
+    text = (
+        "Equipment repairs"
+    )
+
+    tokenizer = tiktoken.get_encoding("gpt2")
+    print(mc_classify_expense(text, model, tokenizer, device, max_length=4))
+
+    text_2 = "Business travel expenses"
+    print(mc_classify_expense(text_2, model, tokenizer, device, max_length=4))
+
 
 
 if __name__ == "__main__":

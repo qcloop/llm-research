@@ -1,17 +1,10 @@
 import time
 
-import matplotlib.pyplot as plt
-import tiktoken
 import torch
-from activations.gelu import GELU
-from models.dummy import DummyGPTModel
 from models.gpt_v2 import GPTV2
 from open_ai.pretrained_weights import (download_gpt2_files,
                                         load_params_from_file,
                                         load_weights_into_gpt)
-from text_generator import TextGenerator
-from tokenizer.encoder import Encoder
-from torch import nn
 
 GPT_CONFIG_124M = {
     "vocab_size": 50257,  # Vocabulary size
@@ -40,7 +33,7 @@ pre_trained_model_dir = (
 )
 
 
-def download_pretrained_weights():
+def mc_download_pretrained_weights():
     CHOOSE_MODEL = "gpt2-small (124M)"
 
     BASE_CONFIG = {
@@ -62,11 +55,11 @@ def download_pretrained_weights():
     download_gpt2_files(model_size, pre_trained_model_dir)
 
 
-def load_model_params():
+def mc_load_model_params():
     settings, params = load_params_from_file(pre_trained_model_dir, "hparams.json")
 
 
-def classifier_model_init():
+def mc_classifier_model_init():
     CHOOSE_MODEL = "gpt2-small (124M)"
 
     BASE_CONFIG = {
@@ -112,7 +105,7 @@ def classifier_model_init():
     gpt.eval()
     torch.manual_seed(123)
 
-    num_classes = 2
+    num_classes = 28
     gpt.out_head = torch.nn.Linear(
         in_features=BASE_CONFIG["emb_dim"], out_features=num_classes
     )
@@ -128,7 +121,7 @@ def classifier_model_init():
     return gpt
 
 
-def make_model_trainable(model: GPTV2):
+def mc_make_model_trainable(model: GPTV2):
     for param in model.trf_blocks[-1].parameters():
         param.requires_grad = True
 
@@ -137,7 +130,7 @@ def make_model_trainable(model: GPTV2):
     return model
 
 
-def train_classifier_model(model: GPTV2, train_loader, val_loader, device):
+def mc_train_classifier_model(model: GPTV2, train_loader, val_loader, device):
     start_time = time.time()
 
     torch.manual_seed(123)
@@ -146,7 +139,7 @@ def train_classifier_model(model: GPTV2, train_loader, val_loader, device):
 
     num_epochs = 5
     train_losses, val_losses, train_accs, val_accs, examples_seen = (
-        train_classifier_simple(
+        mc_train_classifier_simple(
             model,
             train_loader,
             val_loader,
@@ -163,7 +156,7 @@ def train_classifier_model(model: GPTV2, train_loader, val_loader, device):
     print(f"Training completed in {execution_time_minutes:.2f} minutes.")
 
 
-def classify_review(
+def mc_classify_expense(
     text, model, tokenizer, device, max_length=None, pad_token_id=50256
 ):
     model.eval()
@@ -189,7 +182,7 @@ def classify_review(
     predicted_label = torch.argmax(logits, dim=-1).item()
 
     # Return the classified result
-    return "spam" if predicted_label == 1 else "not spam"
+    return f"Schedule C line {predicted_label}"
 
 
 def generate_text_simple(model, idx, max_new_tokens, context_size):
@@ -218,7 +211,7 @@ def generate_text_simple(model, idx, max_new_tokens, context_size):
     return idx
 
 
-def calc_accuracy_loader(data_loader, model, device, num_batches=None):
+def mc_calc_accuracy_loader(data_loader, model, device, num_batches=None):
     model.eval()
     correct_predictions, num_examples = 0, 0
 
@@ -241,7 +234,7 @@ def calc_accuracy_loader(data_loader, model, device, num_batches=None):
     return correct_predictions / num_examples
 
 
-def calc_loss_batch(input_batch, target_batch, model, device):
+def mc_calc_loss_batch(input_batch, target_batch, model, device):
     input_batch, target_batch = input_batch.to(device), target_batch.to(device)
     logits = model(input_batch)[:, -1, :]  # Logits of last output token
     loss = torch.nn.functional.cross_entropy(logits, target_batch)
@@ -249,7 +242,7 @@ def calc_loss_batch(input_batch, target_batch, model, device):
 
 
 # Same as in chapter 5
-def calc_loss_loader(data_loader, model, device, num_batches=None):
+def mc_calc_loss_loader(data_loader, model, device, num_batches=None):
     total_loss = 0.0
     if len(data_loader) == 0:
         return float("nan")
@@ -261,7 +254,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
         num_batches = min(num_batches, len(data_loader))
     for i, (input_batch, target_batch) in enumerate(data_loader):
         if i < num_batches:
-            loss = calc_loss_batch(input_batch, target_batch, model, device)
+            loss = mc_calc_loss_batch(input_batch, target_batch, model, device)
             total_loss += loss.item()
         else:
             break
@@ -269,7 +262,7 @@ def calc_loss_loader(data_loader, model, device, num_batches=None):
 
 
 # Overall the same as `train_model_simple` in chapter 5
-def train_classifier_simple(
+def mc_train_classifier_simple(
     model, train_loader, val_loader, optimizer, device, num_epochs, eval_freq, eval_iter
 ):
     # Initialize lists to track losses and examples seen
@@ -282,7 +275,7 @@ def train_classifier_simple(
 
         for input_batch, target_batch in train_loader:
             optimizer.zero_grad()  # Reset loss gradients from previous batch iteration
-            loss = calc_loss_batch(input_batch, target_batch, model, device)
+            loss = mc_calc_loss_batch(input_batch, target_batch, model, device)
             loss.backward()  # Calculate loss gradients
             optimizer.step()  # Update model weights using loss gradients
             examples_seen += input_batch.shape[
@@ -292,7 +285,7 @@ def train_classifier_simple(
 
             # Optional evaluation step
             if global_step % eval_freq == 0:
-                train_loss, val_loss = evaluate_model(
+                train_loss, val_loss = mc_evaluate_model(
                     model, train_loader, val_loader, device, eval_iter
                 )
                 train_losses.append(train_loss)
@@ -303,10 +296,10 @@ def train_classifier_simple(
                 )
 
         # Calculate accuracy after each epoch
-        train_accuracy = calc_accuracy_loader(
+        train_accuracy = mc_calc_accuracy_loader(
             train_loader, model, device, num_batches=eval_iter
         )
-        val_accuracy = calc_accuracy_loader(
+        val_accuracy = mc_calc_accuracy_loader(
             val_loader, model, device, num_batches=eval_iter
         )
         print(f"Training accuracy: {train_accuracy*100:.2f}% | ", end="")
@@ -317,12 +310,12 @@ def train_classifier_simple(
     return train_losses, val_losses, train_accs, val_accs, examples_seen
 
 
-def evaluate_model(model, train_loader, val_loader, device, eval_iter):
+def mc_evaluate_model(model, train_loader, val_loader, device, eval_iter):
     model.eval()
     with torch.no_grad():
-        train_loss = calc_loss_loader(
+        train_loss = mc_calc_loss_loader(
             train_loader, model, device, num_batches=eval_iter
         )
-        val_loss = calc_loss_loader(val_loader, model, device, num_batches=eval_iter)
+        val_loss = mc_calc_loss_loader(val_loader, model, device, num_batches=eval_iter)
     model.train()
     return train_loss, val_loss
